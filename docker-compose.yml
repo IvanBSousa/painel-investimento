@@ -1,25 +1,34 @@
-
 services:
-  mssql:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+  postgres:
+    image: postgres:17-alpine
     environment:
-      SA_PASSWORD: "CaixaVerso2025"
-      ACCEPT_EULA: "Y"
+      POSTGRES_DB: ${POSTGRES_DB:?Defina POSTGRES_DB no .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Defina POSTGRES_USER no .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
     ports:
-      - "1433:1433"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - mssql-data:/var/opt/mssql
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   app:
     build: .
     environment:
-      QUARKUS_DATASOURCE_JDBC_URL: "jdbc:sqlserver://mssql:1433;databaseName=DesafioAPI"
-      QUARKUS_DATASOURCE_USERNAME: "sa"
-      QUARKUS_DATASOURCE_PASSWORD: "CaixaVerso2025"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:?Defina POSTGRES_DB no .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Defina POSTGRES_USER no .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
     depends_on:
-      - mssql
+      postgres:
+        condition: service_healthy
     ports:
       - "8080:8080"
 
 volumes:
-  mssql-data:
+  postgres-data:

@@ -2,6 +2,68 @@
 
 ## Projeto desenvolvido para Semana de Arquitetura do CaixaVerso
 
+## Banco de dados: PostgreSQL
+
+Requisitos: JDK 21 ou superior e Docker com Docker Compose.
+O projeto usa PostgreSQL 17, Hibernate ORM/Panache e o driver
+`quarkus-jdbc-postgresql`.
+
+O arquivo `.env` contém as credenciais locais e não é versionado.
+Em uma nova cópia do repositório, crie-o a partir de `.env.example`:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Edite `POSTGRES_PASSWORD` no `.env` antes de iniciar o banco. O arquivo
+`.env.example` contém apenas uma senha ilustrativa, nunca credenciais reais.
+`POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST` e
+`POSTGRES_PORT` são lidos pelo Quarkus a partir do `.env` na raiz do projeto.
+Variáveis de ambiente do sistema têm precedência. O Compose usa as mesmas
+credenciais e substitui o host por `postgres` e a porta por `5432` dentro da
+rede dos containers.
+
+Para executar apenas o banco e desenvolver a aplicação localmente:
+
+```powershell
+docker compose up -d postgres
+.\mvnw.cmd quarkus:dev
+```
+
+Para executar o banco e a aplicação em containers, primeiro gere o pacote:
+
+```powershell
+.\mvnw.cmd package -DskipTests
+docker compose up -d --build
+```
+
+A aplicação fica disponível em <http://localhost:8080>. O Compose aguarda
+o PostgreSQL estar pronto antes de iniciar a aplicação. O banco é exposto
+somente em `localhost`, na porta definida por `POSTGRES_PORT`.
+
+**Atenção:** foi mantido o comportamento original de
+`drop-and-create`: cada inicialização da aplicação apaga e recria as tabelas
+e executa `src\main\resources\import.sql`, incluindo os usuários e produtos
+de demonstração. Não aponte essa configuração para um banco com dados que
+precisem ser preservados. Para um banco previamente provisionado, configure
+`QUARKUS_HIBERNATE_ORM_SCHEMA_MANAGEMENT_STRATEGY=validate` e
+`QUARKUS_HIBERNATE_ORM_SQL_LOAD_SCRIPT=no-file` no ambiente da aplicação.
+
+O volume `postgres-data` mantém os arquivos do PostgreSQL ao parar os
+containers com `docker compose down`, mas não impede a recriação das
+tabelas pela aplicação. Não use `docker compose down -v` se precisar
+preservar o volume. Alterar a senha no `.env` não altera a senha de um banco
+já inicializado: nesse caso, atualize também a senha do usuário no PostgreSQL.
+Dados de uma instalação anterior do SQL Server não são transferidos
+automaticamente; o volume anterior não é removido por esta alteração.
+
+Os testes de persistência com `@QuarkusTest` usam Dev Services com um
+PostgreSQL isolado e exigem Docker, sem acessar o banco do `.env`:
+
+```powershell
+.\mvnw.cmd verify
+```
+
 ### Usuário e senha para acesso ao sistema
 
 - Usuário: admin
