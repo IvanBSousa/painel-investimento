@@ -1,6 +1,7 @@
 package caixaverso.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
+import caixaverso.infrastructure.cache.CacheEntityListener;
 import jakarta.validation.constraints.Positive;
 import jdk.jfr.Timestamp;
 
@@ -8,6 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
+@EntityListeners(CacheEntityListener.class)
 @Table(name = "investimento")
 public class InvestimentoEntity {
 

@@ -6,6 +6,7 @@ import caixaverso.infrastructure.persistence.entity.TelemetriaEntity;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
+import io.quarkus.cache.CacheResult;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -20,6 +21,7 @@ public class TelemetriaRepositoryImpl implements PanacheRepositoryBase<Telemetri
         return entity;
     }
 
+    @CacheResult(cacheName = "telemetria")
     public List<TelemetriaItemDTO> agrupaPorServicoEPeriodo(LocalDate inicio, LocalDate fim) {
         String jpql = "SELECT t.nomeServico, COUNT(t), AVG(t.tempoRespostaMs) FROM TelemetriaEntity t "
                 + "WHERE t.dataChamada BETWEEN :inicio AND :fim GROUP BY t.nomeServico";

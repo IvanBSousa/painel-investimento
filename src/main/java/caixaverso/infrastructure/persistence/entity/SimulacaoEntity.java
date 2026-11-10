@@ -2,12 +2,14 @@ package caixaverso.infrastructure.persistence.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import caixaverso.infrastructure.cache.CacheEntityListener;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 
 @Entity
+@EntityListeners(CacheEntityListener.class)
 @Table(name = "simulacao")
 public class SimulacaoEntity extends PanacheEntityBase {
 

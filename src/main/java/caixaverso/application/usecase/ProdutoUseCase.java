@@ -6,6 +6,7 @@ import caixaverso.infrastructure.mapper.ProdutoMapper;
 import caixaverso.infrastructure.persistence.entity.ProdutoEntity;
 import caixaverso.infrastructure.persistence.repository.ProdutoRepositoryImpl;
 import jakarta.enterprise.context.ApplicationScoped;
+import io.quarkus.cache.CacheResult;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -52,6 +53,7 @@ public class ProdutoUseCase {
         return produtoRepository.findValidByParams(valor, prazoMeses, tipoProduto);
     }
 
+    @CacheResult(cacheName = "produtos-recomendados")
     public List<ProdutoDTO> buscarProdutosPorPerfil(PerfilRiscoEnum perfil) {
         return produtoRepository.buscarPorPerfil(perfil)
                 .stream()
