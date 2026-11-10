@@ -26,7 +26,7 @@ rede dos containers.
 Para executar apenas o banco e desenvolver a aplicação localmente:
 
 ```powershell
-docker compose up -d postgres
+docker compose up -d postgres redis
 .\mvnw.cmd quarkus:dev
 ```
 
@@ -63,6 +63,49 @@ PostgreSQL isolado e exigem Docker, sem acessar o banco do `.env`:
 ```powershell
 .\mvnw.cmd verify
 ```
+
+## Cache dos GETs: Redis
+
+O Redis 7.4 roda em um container separado, com autenticação por
+`REDIS_PASSWORD` e porta publicada apenas em `localhost`. Configure essa
+senha no `.env`; o `.env.example` contém somente um exemplo. Para execução
+local, `REDIS_URL` deve apontar para o endereço e a porta publicados
+(`redis://localhost:6379` por padrão). Ao alterar `REDIS_PORT`, ajuste também
+`REDIS_URL`. No Compose, a aplicação usa `redis://redis:6379` e aguarda o
+healthcheck. O Redis não persiste o cache em disco.
+
+Todos os GETs da API usam cache dos dados, sem armazenar objetos HTTP ou
+tokens. Autenticação, autorização e montagem das respostas continuam sendo
+executadas em cada requisição. As chaves incluem o cliente, o perfil, a
+paginação ou as datas efetivas do período, conforme o endpoint.
+
+| GET | Cache | Invalidação após commit |
+| --- | --- | --- |
+| `/investimentos/{clienteId}` | `investimentos` | Alterações em investimentos |
+| `/perfil-risco/{clienteId}` | `perfil-risco` | Alterações em investimentos |
+| `/produtos-recomendados/{perfil}` | `produtos-recomendados` | Alterações em produtos |
+| `/simulacoes` | `simulacoes` | Alterações em simulações |
+| `/simulacoes/por-produto-dia` | `simulacoes-por-produto-dia` | Alterações em simulações |
+| `/telemetria` | `telemetria` | Alterações em telemetria |
+
+O `application.properties` configura `expire-after-write`: `CACHE_TTL=5m`
+para os GETs em geral e `CACHE_TELEMETRIA_TTL=30s` para telemetria. O TTL é
+contado desde a gravação, não é renovado por leituras e também limita a
+defasagem de alterações feitas diretamente no banco. Os listeners JPA
+invalidam todo o cache afetado após uma transação confirmada, inclusive
+paginação e agregações; rollback não invalida. O cache é limpo ao iniciar
+a aplicação, pois o esquema do banco pode ser recriado.
+
+Chamadas de perfil de risco continuam registrando telemetria mesmo em
+acertos de cache, inclusive quando o cliente não possui histórico. A data
+do período de telemetria é resolvida antes da consulta ao cache, evitando
+reutilizar o mês anterior quando os parâmetros são omitidos.
+
+O Redis é uma dependência obrigatória: falhas são propagadas, e falhas de
+invalidação são registradas explicitamente. Se a invalidação falhar após
+o commit, o banco já foi atualizado e a entrada antiga expira pelo TTL.
+Os testes com `@QuarkusTest` usam Redis isolado via Dev Services, além do
+PostgreSQL, e exigem Docker.
 
 ### Usuário e senha para acesso ao sistema
 

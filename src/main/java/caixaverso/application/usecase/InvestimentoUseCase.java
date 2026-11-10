@@ -4,6 +4,7 @@ import caixaverso.application.dto.InvestimentoDTO;
 import caixaverso.infrastructure.mapper.InvestimentoMapper;
 import caixaverso.infrastructure.persistence.repository.InvestimentoRepositoryImpl;
 import jakarta.enterprise.context.ApplicationScoped;
+import io.quarkus.cache.CacheResult;
 
 import java.util.List;
 
@@ -19,6 +20,7 @@ public class InvestimentoUseCase {
         this.investimentoMapper = investimentoMapper;
     }
 
+    @CacheResult(cacheName = "investimentos")
     public List<InvestimentoDTO> listarPorCliente(Long clienteId) {
         return investimentoRepository.listarPorCliente(clienteId)
                 .stream()

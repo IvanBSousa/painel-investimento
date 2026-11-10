@@ -2,10 +2,12 @@ package caixaverso.infrastructure.persistence.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import caixaverso.infrastructure.cache.CacheEntityListener;
 
 import java.time.LocalDate;
 
 @Entity
+@EntityListeners(CacheEntityListener.class)
 @Table(name = "telemetria")
 public class TelemetriaEntity extends PanacheEntityBase {
 

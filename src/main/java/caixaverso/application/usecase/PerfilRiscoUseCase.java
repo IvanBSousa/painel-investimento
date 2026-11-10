@@ -6,6 +6,7 @@ import caixaverso.infrastructure.persistence.entity.TelemetriaEntity;
 import caixaverso.infrastructure.persistence.repository.InvestimentoRepositoryImpl;
 import caixaverso.infrastructure.persistence.repository.TelemetriaRepositoryImpl;
 import jakarta.enterprise.context.ApplicationScoped;
+import io.quarkus.cache.CacheResult;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -23,9 +24,20 @@ public class PerfilRiscoUseCase {
     }
 
     public PerfilRiscoResponseDTO calcularPerfil(Long clienteId) {
-
         Long inicio = System.currentTimeMillis();
+        PerfilRiscoResponseDTO perfil = calcularPerfilCacheado(clienteId);
 
+        TelemetriaEntity dadosTelemetria = new TelemetriaEntity();
+        dadosTelemetria.setNomeServico("perfil-risco");
+        dadosTelemetria.setTempoRespostaMs(System.currentTimeMillis() - inicio);
+        dadosTelemetria.setDataChamada(LocalDate.now());
+        telemetriaRepository.salvar(dadosTelemetria);
+
+        return perfil;
+    }
+
+    @CacheResult(cacheName = "perfil-risco")
+    public PerfilRiscoResponseDTO calcularPerfilCacheado(Long clienteId) {
         List<InvestimentoEntity> historico = investimentoRepository.listarPorCliente(clienteId);
 
         if (historico.isEmpty()) {
@@ -72,16 +84,6 @@ public class PerfilRiscoUseCase {
             perfil = "Conservador";
             descricao = "Prioriza segurança e liquidez.";
         }
-
-        Long fim = System.currentTimeMillis();
-        Long tempoExecucao = fim - inicio;
-
-        TelemetriaEntity dadosTelemetria = new TelemetriaEntity();
-        dadosTelemetria.setNomeServico("perfil-risco");
-        dadosTelemetria.setTempoRespostaMs(tempoExecucao);
-        dadosTelemetria.setDataChamada(LocalDate.now());
-
-        telemetriaRepository.salvar(dadosTelemetria);
 
         return new PerfilRiscoResponseDTO(clienteId, perfil, pontuacao, descricao);
     }

@@ -13,6 +13,7 @@ import caixaverso.infrastructure.persistence.repository.ProdutoRepositoryImpl;
 import caixaverso.infrastructure.persistence.repository.SimulacaoRepositoryImpl;
 import caixaverso.infrastructure.persistence.repository.TelemetriaRepositoryImpl;
 import jakarta.enterprise.context.ApplicationScoped;
+import io.quarkus.cache.CacheResult;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -39,6 +40,7 @@ public class SimulacaoUseCase {
         this.responseMapper = responseMapper;
     }
 
+    @CacheResult(cacheName = "simulacoes")
     public List<SimulacaoHistoricoDTO> listarTodos(int page, int size) {
         List<SimulacaoEntity> lista = simulacaoRepository.listarPaginado(page, size);
 
@@ -105,6 +107,7 @@ public class SimulacaoUseCase {
         return BigDecimal.valueOf(vf).setScale(2, RoundingMode.HALF_UP);
     }
 
+    @CacheResult(cacheName = "simulacoes-por-produto-dia")
     public List<SimulacaoAgrupadaResponseDTO> agregacaoPorProdutoDia() {
         return simulacaoRepository.agruparPorProdutoDia();
     }
