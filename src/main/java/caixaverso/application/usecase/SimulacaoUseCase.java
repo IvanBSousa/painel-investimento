@@ -4,6 +4,7 @@ import caixaverso.application.dto.SimulacaoAgrupadaResponseDTO;
 import caixaverso.application.dto.SimulacaoHistoricoDTO;
 import caixaverso.application.dto.SimulacaoRequestDTO;
 import caixaverso.application.dto.SimulacaoResponseDTO;
+import caixaverso.application.exception.EntradaInvalidaException;
 import caixaverso.infrastructure.mapper.SimulacaoHistoricoMapper;
 import caixaverso.infrastructure.mapper.SimulacaoResponseMapper;
 import caixaverso.infrastructure.persistence.entity.ProdutoEntity;
@@ -15,6 +16,7 @@ import caixaverso.infrastructure.persistence.repository.TelemetriaRepositoryImpl
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -22,6 +24,8 @@ import java.util.List;
 
 @ApplicationScoped
 public class SimulacaoUseCase {
+
+    private static final BigDecimal VALOR_MAXIMO = new BigDecimal("9999999999999999.99");
 
     private final ProdutoRepositoryImpl produtoRepositoryImpl;
     private final SimulacaoRepositoryImpl simulacaoRepository;
@@ -40,6 +44,10 @@ public class SimulacaoUseCase {
     }
 
     public List<SimulacaoHistoricoDTO> listarTodos(int page, int size) {
+        if (page < 0 || size < 1 || (long) page * size > Integer.MAX_VALUE) {
+            throw new EntradaInvalidaException(
+                    "Paginação inválida: page deve ser não negativo, size positivo e page * size não pode exceder 2147483647.");
+        }
         List<SimulacaoEntity> lista = simulacaoRepository.listarPaginado(page, size);
 
         return lista.stream()
@@ -50,7 +58,7 @@ public class SimulacaoUseCase {
     public SimulacaoEntity simularInterno(Long clienteId, BigDecimal valor, int prazoMeses, String nomeProduto) {
 
         ProdutoEntity produto = produtoRepositoryImpl.findByName(nomeProduto)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+                .orElseThrow(() -> new EntradaInvalidaException("Produto não encontrado."));
 
         BigDecimal mensal = converterTaxaAnualParaMensal(produto.getRentabilidade());
         BigDecimal valorFinal = calcularJurosCompostos(valor, mensal, prazoMeses);
@@ -91,7 +99,7 @@ public class SimulacaoUseCase {
         return responseMapper.toResponse(
             entity,
             produtoRepositoryImpl.findByName(request.produto())
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado")
+                .orElseThrow(() -> new EntradaInvalidaException("Produto não encontrado.")
         ));
     }
 
@@ -101,8 +109,20 @@ public class SimulacaoUseCase {
     }
 
     private BigDecimal calcularJurosCompostos(BigDecimal valor, BigDecimal taxaMensal, int meses) {
-        double vf = valor.doubleValue() * Math.pow(1 + taxaMensal.doubleValue(), meses);
-        return BigDecimal.valueOf(vf).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal valorFinal;
+        try {
+            valorFinal = valor.multiply(
+                    BigDecimal.ONE.add(taxaMensal).pow(meses, MathContext.DECIMAL128),
+                    MathContext.DECIMAL128);
+        } catch (ArithmeticException exception) {
+            throw new EntradaInvalidaException(
+                    "O valor e o prazo informados excedem a capacidade de cálculo da simulação.", exception);
+        }
+        if (valorFinal.compareTo(VALOR_MAXIMO) > 0) {
+            throw new EntradaInvalidaException(
+                    "O valor final excede o limite de armazenamento de 9999999999999999.99.");
+        }
+        return valorFinal.setScale(2, RoundingMode.HALF_UP);
     }
 
     public List<SimulacaoAgrupadaResponseDTO> agregacaoPorProdutoDia() {

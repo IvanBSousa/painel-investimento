@@ -1,6 +1,7 @@
 package caixaverso.application.usecase;
 
 import caixaverso.application.dto.*;
+import caixaverso.application.exception.EntradaInvalidaException;
 import caixaverso.infrastructure.mapper.SimulacaoHistoricoMapper;
 import caixaverso.infrastructure.mapper.SimulacaoResponseMapper;
 import caixaverso.infrastructure.persistence.entity.ProdutoEntity;
@@ -11,6 +12,8 @@ import caixaverso.infrastructure.persistence.repository.SimulacaoRepositoryImpl;
 import caixaverso.infrastructure.persistence.repository.TelemetriaRepositoryImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.*;
 import java.lang.reflect.*;
 import java.math.BigDecimal;
@@ -95,9 +98,10 @@ class SimulacaoUseCaseTest {
         when(produtoRepository.findByName("XPTO"))
                 .thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () ->
+        assertThrows(EntradaInvalidaException.class, () ->
                 useCase.simularInterno(1L, BigDecimal.TEN, 10, "XPTO")
         );
+        verifyNoInteractions(simulacaoRepository, telemetriaRepository);
     }
 
     @Test
@@ -171,5 +175,45 @@ class SimulacaoUseCaseTest {
         BigDecimal resultado = (BigDecimal) m.invoke(useCase, valor, taxa, meses);
 
         assertEquals(new BigDecimal("1126.83"), resultado);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"-1,20", "0,0", "0,-1", "2147483647,2"})
+    void deveRejeitarPaginacaoInvalidaAntesDaConsulta(int page, int size) {
+        assertThrows(EntradaInvalidaException.class, () -> useCase.listarTodos(page, size));
+        verifyNoInteractions(simulacaoRepository);
+    }
+
+    @Test
+    void deveAceitarLimiteTecnicoDoOffset() {
+        when(simulacaoRepository.listarPaginado(Integer.MAX_VALUE, 1)).thenReturn(List.of());
+
+        assertTrue(useCase.listarTodos(Integer.MAX_VALUE, 1).isEmpty());
+        verify(simulacaoRepository).listarPaginado(Integer.MAX_VALUE, 1);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"9999999999999999.99,0,9999999999999999.99", "1.00,0.005,1.01"})
+    void devePreservarCentavosEArredondarComHalfUp(String valor, String taxa, String esperado) throws Exception {
+        Method method = SimulacaoUseCase.class.getDeclaredMethod(
+                "calcularJurosCompostos", BigDecimal.class, BigDecimal.class, int.class);
+        method.setAccessible(true);
+
+        assertEquals(new BigDecimal(esperado),
+                method.invoke(useCase, new BigDecimal(valor), new BigDecimal(taxa), 1));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"9999999999999999.99,12", "1000.00,100000000", "1000.00,2147483647"})
+    void deveRejeitarResultadoOuPrazoForaDaCapacidadeSemPersistir(String valor, int prazo) {
+        ProdutoEntity produto = new ProdutoEntity();
+        produto.setNome("CDB");
+        produto.setRentabilidade(new BigDecimal("0.12"));
+        when(produtoRepository.findByName("CDB")).thenReturn(Optional.of(produto));
+
+        assertThrows(EntradaInvalidaException.class,
+                () -> useCase.simularInterno(1L, new BigDecimal(valor), prazo, "CDB"));
+
+        verifyNoInteractions(simulacaoRepository, telemetriaRepository);
     }
 }

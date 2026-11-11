@@ -89,7 +89,23 @@ class SimulacaoRepositoryImplTest {
         assertEquals("CDB", dto.produto());
         assertEquals(LocalDate.of(2025, 1, 10), dto.data());
         assertEquals(2L, dto.quantidadeSimulacoes());
-        assertEquals(new BigDecimal("1500"), dto.mediaValorFinal());
+        assertEquals(new BigDecimal("1500.00"), dto.mediaValorFinal());
+    }
+
+    @Test
+    void agruparPorProdutoDia_deveArredondarMediaPeriodicaComHalfUp() {
+        when(em.createQuery(anyString())).thenReturn(query);
+        List<Object[]> rows = new ArrayList<>();
+        rows.add(new Object[]{"CDB", LocalDate.of(2025, 1, 10), 3L,
+                BigDecimal.ZERO, new BigDecimal("100.01")});
+        rows.add(new Object[]{"LCI", LocalDate.of(2025, 1, 10), 2L,
+                BigDecimal.ZERO, new BigDecimal("2.01")});
+        when(query.getResultList()).thenReturn(rows);
+
+        var result = repository.agruparPorProdutoDia();
+
+        assertEquals(new BigDecimal("33.34"), result.get(0).mediaValorFinal());
+        assertEquals(new BigDecimal("1.01"), result.get(1).mediaValorFinal());
     }
 
     @Test

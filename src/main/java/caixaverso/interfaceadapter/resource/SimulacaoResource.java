@@ -9,6 +9,8 @@ import jakarta.inject.Inject;
 import jakarta.persistence.Table;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -32,7 +34,7 @@ public class SimulacaoResource {
     @Path("/simular-investimento")
     @PermitAll
     @Transactional
-    public Response simular(@Valid SimulacaoRequestDTO request) {
+    public Response simular(@NotNull(message = "O corpo da requisição é obrigatório.") @Valid SimulacaoRequestDTO request) {
         SimulacaoResponseDTO response = simulacaoUseCase.simular(request);
         return Response.ok(response).build();
     }
@@ -40,8 +42,9 @@ public class SimulacaoResource {
     @GET
     @Path("simulacoes")
     @RolesAllowed("Admin")
-    public Response listarTodos(@QueryParam("page") @DefaultValue("0") int page,
-            @QueryParam("size") @DefaultValue("20") int size) {
+    public Response listarTodos(
+            @QueryParam("page") @DefaultValue("0") @Min(value = 0, message = "A página não pode ser negativa.") int page,
+            @QueryParam("size") @DefaultValue("20") @Min(value = 1, message = "O tamanho da página deve ser positivo.") int size) {
         List<SimulacaoHistoricoDTO> simulacoes = simulacaoUseCase.listarTodos(page, size);
         if (simulacoes.isEmpty()) {
             return Response.status(Response.Status.OK)

@@ -44,8 +44,6 @@ public class TelemetriaResource {
 
         TelemetriaPeriodoDTO periodo = new TelemetriaPeriodoDTO(comeco, fim);
 
-        List<TelemetriaItemDTO> itens = telemetriaRepositoryImpl.agrupaPorServicoEPeriodo(comeco, fim);
-
         if (fim .isBefore(comeco)) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity("""
@@ -54,6 +52,8 @@ public class TelemetriaResource {
                     }
                     """).build();
         }
+
+        List<TelemetriaItemDTO> itens = telemetriaRepositoryImpl.agrupaPorServicoEPeriodo(comeco, fim);
 
         if (itens.isEmpty()) {
             return Response.status(Response.Status.OK)
