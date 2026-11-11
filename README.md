@@ -117,6 +117,42 @@ PostgreSQL, e exigem Docker.
 - Senha: user
 
 
+## Validações de entrada e arredondamento (item 6)
+
+As entradas inválidas retornam HTTP 400. A simulação exige corpo JSON,
+`valorInvestido` positivo com até 16 dígitos inteiros e 2 casas decimais,
+`prazoMeses` entre 1 e 600 (até 50 anos) e `produto` preenchido com até 255
+caracteres.
+O limite monetário corresponde às colunas existentes `NUMERIC(18,2)`,
+não a um novo limite de negócio. `clienteId` continua opcional na simulação
+pública; quando informado, deve ser positivo. Os IDs das consultas também
+devem ser positivos. O login exige corpo, usuário e senha preenchidos.
+
+Na listagem de simulações, `page` começa em 0 e `size` deve ser positivo
+(padrões: 0 e 20). O deslocamento `page * size` não pode ultrapassar
+2147483647, limite da API de paginação JPA. Não foi criado um máximo
+arbitrário de itens por página. Períodos de telemetria invertidos são
+rejeitados antes de consultar o banco.
+
+Produto inexistente, prazo fora do limite, resultado acima de
+9999999999999999.99 ou cálculo incompatível com a capacidade decimal retornam
+HTTP 400 com `mensagem`, sem salvar a simulação.
+
+O cálculo composto usa `BigDecimal` com precisão `DECIMAL128`, mantendo a
+conversão anual/mensal existente com taxa de 10 casas decimais. O valor final
+e a média por produto/dia são arredondados para 2 casas com `HALF_UP`.
+Valores de entrada com mais de 2 casas são rejeitados, não arredondados
+silenciosamente. Essa correção pode alterar centavos em casos antes
+afetados pela conversão do capital para `double`.
+Rentabilidades ausentes, abaixo de -100% ou fora da faixa numérica suportada
+no cadastro do produto falham antes de qualquer persistência da simulação.
+
+Os testes dessas regras podem rodar sem banco nem Docker:
+
+```powershell
+mvn test "-Dtest=ValidacaoEntradaTest,SimulacaoUseCaseTest,SimulacaoRepositoryImplTest,TelemetriaResourceTest,EntradaInvalidaExceptionMapperTest"
+```
+
 ## Running the application in dev mode
 
 You can run your application in dev mode that enables live coding using:

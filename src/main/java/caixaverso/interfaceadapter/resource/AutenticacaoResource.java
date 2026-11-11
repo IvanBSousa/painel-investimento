@@ -3,6 +3,8 @@ package caixaverso.interfaceadapter.resource;
 import caixaverso.application.dto.LoginRequestDTO;
 import caixaverso.application.usecase.UsuarioUseCase;
 import jakarta.annotation.security.PermitAll;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -24,7 +26,7 @@ public class AutenticacaoResource {
     @POST
     @Path("/login")
     @Produces(MediaType.TEXT_PLAIN)
-    public Response login(LoginRequestDTO loginRequest) {
+    public Response login(@NotNull(message = "O corpo da requisição é obrigatório.") @Valid LoginRequestDTO loginRequest) {
         return usuarioUseCase.autenticaEGeraToken(loginRequest.usuario(), loginRequest.senha())
                 .map(token -> Response.ok(token).build())
                 .orElseGet(() -> Response.status(Response.Status.UNAUTHORIZED)

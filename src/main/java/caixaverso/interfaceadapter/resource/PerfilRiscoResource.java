@@ -5,6 +5,7 @@ import caixaverso.application.dto.PerfilRiscoResponseDTO;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
+import jakarta.validation.constraints.Positive;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -23,7 +24,7 @@ public class PerfilRiscoResource {
     @GET
     @Path("/{clienteId}")
     @RolesAllowed("Admin")
-    public Response obter(@PathParam("clienteId") Long clienteId) {
+    public Response obter(@PathParam("clienteId") @Positive(message = "O clienteId deve ser positivo.") Long clienteId) {
         PerfilRiscoResponseDTO perfilRisco = perfilRiscoUseCase.calcularPerfil(clienteId);
         return Response.ok(perfilRisco).build();
     }

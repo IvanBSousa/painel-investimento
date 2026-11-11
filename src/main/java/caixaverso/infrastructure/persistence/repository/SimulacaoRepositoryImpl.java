@@ -9,6 +9,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -70,11 +71,9 @@ public class SimulacaoRepositoryImpl implements SimulacaoRepository {
 
             Long quantidade = countObj == null ? 0L : ((Number) countObj).longValue();
 
-//            BigDecimal mediaValorFinal = toBigDecimal(sumFinalObj).divide(BigDecimal.valueOf(quantidade));
-
             BigDecimal somaFinal = toBigDecimal(sumFinalObj);
             BigDecimal mediaValorFinal = quantidade == 0 ? BigDecimal.ZERO :
-                            somaFinal.divide(BigDecimal.valueOf(quantidade));
+                            somaFinal.divide(BigDecimal.valueOf(quantidade), 2, RoundingMode.HALF_UP);
 
 
             result.add(new SimulacaoAgrupadaResponseDTO(produto, data, quantidade, mediaValorFinal));
