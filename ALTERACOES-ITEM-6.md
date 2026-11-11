@@ -34,14 +34,14 @@ O limite de valor acompanha as colunas existentes `NUMERIC(18,2)`:
   de 2 casas decimais.
 - O resultado é verificado antes da persistência para garantir que cabe na
   coluna `valor_final`.
-- Prazos que excedam a capacidade do cálculo decimal retornam HTTP 400.
-- O prazo mínimo continua sendo 1 mês.
-- Não foi definido um prazo máximo de negócio. A operação `BigDecimal.pow`
-  aceita expoentes até 999999999; o resultado pode ultrapassar o limite de
-  armazenamento antes disso.
+- O prazo permitido é de 1 a 600 meses (até 50 anos), limite aplicado na
+  validação HTTP e também na camada de cálculo.
+- Prazos acima do máximo retornam HTTP 400 antes de consultar produto ou
+  executar o cálculo. O resultado ainda é verificado contra a capacidade
+  de armazenamento antes da persistência.
 
-Os limites comerciais de valor e prazo ainda poderão ser definidos pelo
-grupo. Esta entrega trata os limites técnicos já existentes.
+O limite de 600 meses cobre horizontes longos de planejamento financeiro
+sem aceitar prazos que não sejam úteis para uma simulação de investimento.
 
 ## 3. Tratamento de entradas inválidas
 
@@ -50,8 +50,9 @@ Novos arquivos:
 - `src/main/java/caixaverso/application/exception/EntradaInvalidaException.java`
 - `src/main/java/caixaverso/interfaceadapter/exception/EntradaInvalidaExceptionMapper.java`
 
-Produto inexistente, paginação inválida e limites de cálculo/armazenamento
-passaram a retornar HTTP 400 com mensagem JSON, por exemplo:
+Produto inexistente, prazo inválido ou acima do máximo, paginação inválida
+e limites de cálculo/armazenamento passaram a retornar HTTP 400 com mensagem
+JSON, por exemplo:
 
 ```json
 {
@@ -100,6 +101,8 @@ para 2 casas decimais com `RoundingMode.HALF_UP`.
 A conversão anual/mensal existente foi preservada: ainda usa `Math.pow`
 e taxa mensal com 10 casas decimais. Portanto, não se trata de uma
 reescrita de toda a fórmula usando exclusivamente operações decimais.
+Taxas ausentes, abaixo de -100% ou fora da faixa numérica suportada são
+tratadas como configuração inválida do produto e não são persistidas.
 
 Arquivo: `SimulacaoRepositoryImpl.java`.
 
@@ -155,7 +158,7 @@ Cobertura acrescentada:
 - Período invertido sem consulta ao banco.
 - Mapeamento de erro de entrada para HTTP 400 com mensagem JSON.
 
-Os 46 testes da seleção executada passaram. A seleção pode ser executada
+Os 55 testes da seleção executada passaram. A seleção pode ser executada
 sem banco e sem Docker:
 
 ```powershell

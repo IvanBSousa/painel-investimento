@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.*;
 import java.lang.reflect.*;
 import java.math.BigDecimal;
@@ -190,6 +191,44 @@ class SimulacaoUseCaseTest {
 
         assertTrue(useCase.listarTodos(Integer.MAX_VALUE, 1).isEmpty());
         verify(simulacaoRepository).listarPaginado(Integer.MAX_VALUE, 1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 601, Integer.MAX_VALUE})
+    void deveRejeitarPrazoForaDoLimiteAntesDeConsultarProduto(int prazo) {
+        assertThrows(EntradaInvalidaException.class,
+                () -> useCase.simularInterno(1L, BigDecimal.ONE, prazo, "CDB"));
+
+        verifyNoInteractions(produtoRepository, simulacaoRepository, telemetriaRepository);
+    }
+
+    @Test
+    void deveAceitarPrazoMaximoNaSimulacao() {
+        ProdutoEntity produto = new ProdutoEntity();
+        produto.setNome("CDB");
+        produto.setRentabilidade(new BigDecimal("0.12"));
+        when(produtoRepository.findByName("CDB")).thenReturn(Optional.of(produto));
+
+        SimulacaoEntity result = useCase.simularInterno(
+                1L, new BigDecimal("1000.00"), SimulacaoRequestDTO.PRAZO_MAXIMO_MESES, "CDB");
+
+        assertNotNull(result);
+        assertEquals(SimulacaoRequestDTO.PRAZO_MAXIMO_MESES, result.getPrazoMeses());
+        verify(simulacaoRepository).salvar(any(SimulacaoEntity.class));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"-1.01", "1E+10000"})
+    void deveFalharSemPersistirQuandoRentabilidadeDoProdutoForInvalida(String taxaAnual) {
+        ProdutoEntity produto = new ProdutoEntity();
+        produto.setNome("CDB");
+        produto.setRentabilidade(new BigDecimal(taxaAnual));
+        when(produtoRepository.findByName("CDB")).thenReturn(Optional.of(produto));
+
+        assertThrows(IllegalStateException.class,
+                () -> useCase.simularInterno(1L, BigDecimal.ONE, 12, "CDB"));
+
+        verifyNoInteractions(simulacaoRepository, telemetriaRepository);
     }
 
     @ParameterizedTest

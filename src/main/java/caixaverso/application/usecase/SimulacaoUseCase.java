@@ -56,6 +56,11 @@ public class SimulacaoUseCase {
     }
 
     public SimulacaoEntity simularInterno(Long clienteId, BigDecimal valor, int prazoMeses, String nomeProduto) {
+        if (prazoMeses < 1 || prazoMeses > SimulacaoRequestDTO.PRAZO_MAXIMO_MESES) {
+            throw new EntradaInvalidaException(
+                    "O prazo em meses deve estar entre 1 e "
+                            + SimulacaoRequestDTO.PRAZO_MAXIMO_MESES + ".");
+        }
 
         ProdutoEntity produto = produtoRepositoryImpl.findByName(nomeProduto)
                 .orElseThrow(() -> new EntradaInvalidaException("Produto não encontrado."));
@@ -104,7 +109,14 @@ public class SimulacaoUseCase {
     }
 
     private BigDecimal converterTaxaAnualParaMensal(BigDecimal taxaAnual) {
-        return BigDecimal.valueOf(Math.pow(1 + taxaAnual.doubleValue(), 1.0 / 12.0) - 1)
+        if (taxaAnual == null || taxaAnual.compareTo(BigDecimal.ONE.negate()) < 0) {
+            throw new IllegalStateException("A rentabilidade anual do produto não permite capitalização composta.");
+        }
+        double taxaMensal = Math.pow(1.0 + taxaAnual.doubleValue(), 1.0 / 12.0) - 1.0;
+        if (!Double.isFinite(taxaMensal)) {
+            throw new IllegalStateException("A rentabilidade anual do produto excede a capacidade do cálculo.");
+        }
+        return BigDecimal.valueOf(taxaMensal)
                 .setScale(10, RoundingMode.HALF_UP);
     }
 

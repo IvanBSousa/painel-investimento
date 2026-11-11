@@ -65,6 +65,19 @@ class ValidacaoEntradaTest {
     }
 
     @ParameterizedTest
+    @ValueSource(ints = {601, Integer.MAX_VALUE})
+    void deveRejeitarPrazoAcimaDoMaximo(int prazo) {
+        assertFalse(validator.validate(
+                new SimulacaoRequestDTO(1L, BigDecimal.ONE, prazo, "CDB")).isEmpty());
+    }
+
+    @Test
+    void deveAceitarPrazoMaximo() {
+        assertTrue(validator.validate(new SimulacaoRequestDTO(
+                1L, BigDecimal.ONE, SimulacaoRequestDTO.PRAZO_MAXIMO_MESES, "CDB")).isEmpty());
+    }
+
+    @ParameterizedTest
     @ValueSource(longs = {0L, -1L})
     void deveRejeitarClienteNaoPositivo(long clienteId) {
         assertFalse(validator.validate(
