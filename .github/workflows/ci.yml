@@ -61,5 +61,8 @@ jobs:
           java-version: '25'
           cache: maven
 
+      - name: Check Java style
+        run: mvn -B org.apache.maven.plugins:maven-checkstyle-plugin:3.6.0:check
+
       - name: Build
         run: mvn verify -B
