@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?Defina POSTGRES_USER no .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5430}:5430"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -42,8 +42,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
       REDIS_URL: redis://redis:6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Defina REDIS_PASSWORD no .env}
-      CACHE_TTL: ${CACHE_TTL:-5m}
-      CACHE_TELEMETRIA_TTL: ${CACHE_TELEMETRIA_TTL:-30s}
+      CACHE_TTL: ${CACHE_TTL:-PT5M}
+      CACHE_TELEMETRIA_TTL: ${CACHE_TELEMETRIA_TTL:-PT30S}
     depends_on:
       postgres:
         condition: service_healthy

@@ -88,8 +88,9 @@ paginação ou as datas efetivas do período, conforme o endpoint.
 | `/simulacoes/por-produto-dia` | `simulacoes-por-produto-dia` | Alterações em simulações |
 | `/telemetria` | `telemetria` | Alterações em telemetria |
 
-O `application.properties` configura `expire-after-write`: `CACHE_TTL=5m`
-para os GETs em geral e `CACHE_TELEMETRIA_TTL=30s` para telemetria. O TTL é
+O `application.properties` configura `expire-after-write`: `CACHE_TTL=PT5M`
+para os GETs em geral e `CACHE_TELEMETRIA_TTL=PT30S` para telemetria, usando
+o formato ISO-8601 aceito por `java.time.Duration`. O TTL é
 contado desde a gravação, não é renovado por leituras e também limita a
 defasagem de alterações feitas diretamente no banco. Os listeners JPA
 invalidam todo o cache afetado após uma transação confirmada, inclusive
