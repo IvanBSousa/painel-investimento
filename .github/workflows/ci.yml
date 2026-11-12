@@ -8,17 +8,57 @@ on:
   pull_request:
     branches: [ main ]
 
+#jobs:
+#  build:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v5
+#
+#      - name: Set up JDK 25
+#        uses: actions/setup-java@v4
+#        with:
+#          java-version: 25.0.2
+#          distribution: oracle
+#          cache: maven
+#
+#      - name: Build
+#        run: mvn verify -B
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: quarkus
+          POSTGRES_USER: quarkus
+          POSTGRES_PASSWORD: quarkus
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: quarkus
+      POSTGRES_USER: quarkus
+      POSTGRES_PASSWORD: quarkus
+      REDIS_URL: redis://localhost:6379
+      REDIS_PASSWORD: ""
+
     steps:
       - uses: actions/checkout@v5
 
-      - name: Set up JDK 25
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
-          java-version: 25.0.2
-          distribution: oracle
+          distribution: temurin
+          java-version: '21'
           cache: maven
 
       - name: Build
